@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DLQ Response Lookup</title>
+  <link rel="stylesheet" href="theme.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background: url('background.jpg'), linear-gradient(to bottom right, #f9f9ff, #e6ecf4);
+      background-blend-mode: overlay;
+      background-size: cover;
+      background-attachment: fixed;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    header {
+      background-color: #5C4D7D;
+      padding: 15px 30px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    nav ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      gap: 20px;
+    }
+
+    nav ul li a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    nav ul li a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      margin: 50px auto;
+      max-width: 800px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    h2, h3 {
+      color: #4d3e69;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 15px;
+      font-size: 1rem;
+      margin: 10px 0 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #5C4D7D;
+      color: #fff;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 30px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+
+    button:hover {
+      background-color: #493d61;
+    }
+
+    ul {
+      padding-left: 20px;
+      line-height: 1.6;
+    }
+
+    ul li {
+      margin-bottom: 10px;
+    }
+
+    hr {
+      border: 0;
+      height: 1px;
+      background: #ddd;
+      margin: 30px 0;
+    }
+
+    .spinner {
+      margin: 20px auto;
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #5C4D7D;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.8s ease-in;
+    }
+ 
+    #dlq-results ul li {
+      transition: background-color 0.3s, transform 0.3s;
+      padding: 8px;
+      border-radius: 8px;
+    }
+
+    #dlq-results ul li:hover {
+      background-color: #f0f0f5;
+      transform: translateX(5px);
+    }
+
+    .no-results {
+      color: #cc0000;
+      font-weight: 600;
+      background: #ffeaea;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      margin-top: 20px;
+      box-shadow: 0 4px 10px rgba(255,0,0,0.1);
+    }
+
+    @keyframes glowFadeIn {
+      0% {
+        opacity: 0;
+        text-shadow: 0 0 5px #4d3e69, 0 0 10px #4d3e69;
+        transform: translateY(20px);
+      }
+      100% {
+        opacity: 1;
+        text-shadow: 0 0 0 transparent;
+        transform: translateY(0);
+      }
+    }
+
+    .glow-title {
+      animation: glowFadeIn 1s ease forwards;
+      opacity: 0;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo">LifeCycle</div>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="mailto:support@lifecycle.com">Contact</a></li>
+        <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- DLQ Lookup Section -->
+  <div class="container">
+    <h2>DLQ Response Lookup</h2>
+    <label for="dlq-id">Enter Your DLQ ID:</label>
+    <input type="text" id="dlq-id" placeholder="e.g. DLQ_SH1234" required />
+    <button onclick="loadDLQ()">View My Responses</button>
+
+    <div id="dlq-results" style="margin-top: 30px;"></div>
+  </div>
+
+  <!-- Script -->
+  <script>
+    const API = "http://localhost:4000/api";
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "login-register.html";
+    }
+
+    async function loadDLQ() {
+      const dlqId = document.getElementById("dlq-id").value.trim().toUpperCase();
+      const container = document.getElementById("dlq-results");
+      container.classList.remove("fade-in");
+      container.innerHTML = `<div class="spinner"></div>`;
+
+      try {
+        const res = await fetch(`${API}/dlq/${dlqId}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          container.innerHTML = `<div class="no-results"> ${data.error || "No DLQ responses found for this ID."}</div>`;
+          return;
+        }
+
+        // Group responses by section
+        const grouped = {};
+        data.responses.forEach(entry => {
+          if (!grouped[entry.section]) grouped[entry.section] = [];
+          grouped[entry.section].push(entry);
+        });
+
+        // Define domain benchmarks
+        const benchmarks = {
+          "Skills": 7.5,
+          "Experience": 7.0,
+          "Action": 7.3,
+          "Knowledge": 7.8
+        };
+
+        // Map sections to domains
+        const domainMapping = {
+          "Providing Hands-on Care": "Skills",
+          "Personal Experience": "Experience",
+          "End-of-Life Planning": "Experience",
+          "Community Knowledge": "Action",
+          "Support Groups in My Community": "Action",
+          "Factual Knowledge": "Knowledge",
+          "Experiential Knowledge": "Knowledge"
+        };
+
+        // Define number of items per domain (for scaling)
+        const maxScores = {
+          "Skills": 4 * 5,
+          "Experience": 13 * 1,
+          "Action": 9 * 5,
+          "Knowledge": 12 * 5
+        };
+
+        // Feedback logic
+        const feedbackData = {
+          "Skills": [
+            { range: [0, 3.8], label: "Lower", summary: "You may not have had much experience helping someone physically at the end of life.", action: "You could look into volunteering or even just learn basic care skills—it can help build confidence over time." },
+            { range: [3.8, 6.2], label: "Similar", summary: "You’ve had some hands-on experience, about the same as most people.", action: "Share what you’ve learned, and look for chances to build on your skills when you feel ready." },
+            { range: [6.2, 10], label: "Higher", summary: "You’ve clearly had experience helping someone directly, and that’s really valuable.", action: "Consider mentoring others or getting involved in your community’s end-of-life care efforts. Your experience can make a difference." }
+          ],
+          "Experience": [
+            { range: [0, 4.75], label: "Lower", summary: "You may not have had many personal or professional experiences with death or dying.", action: "Consider listening to others' stories, or gently reflect on your own feelings. That’s a good starting point." },
+            { range: [4.75, 7.05], label: "Similar", summary: "Your experiences are about average—enough to give you a sense of what death and dying can be like.", action: "Stay open to learning from your own experiences and those around you. It builds wisdom." },
+            { range: [7.05, 10], label: "Higher", summary: "You’ve had more exposure to death and dying than most.", action: "You might find yourself naturally supporting others—your lived experience is a real asset." }
+          ],
+          "Action": [
+            { range: [0, 3.5], label: "Lower", summary: "You might not feel very supported by your community around death-related matters.", action: "See if there are community groups or events that can help build that support. Small actions make a big difference." },
+            { range: [3.5, 5.7], label: "Similar", summary: "Your sense of community support is about the same as others'.", action: "Keep showing up and being part of the conversation—it helps the whole community grow stronger." },
+            { range: [5.7, 10], label: "Higher", summary: "You see your community as supportive and engaged around dying and grieving.", action: "Share what’s working—others might be looking for ideas to build similar support in their own communities." }
+          ],
+          "Knowledge": [
+            { range: [0, 2.5], label: "Lower", summary: "You might not feel very informed about end-of-life care or services right now.", action: "Learning even just a bit more—like what options exist—can help you feel more prepared and confident." },
+            { range: [2.5, 5.08], label: "Similar", summary: "You’ve got a good, solid base of knowledge—enough to understand what’s going on.", action: "Keep asking questions and exploring. It’ll help you and those you care about." },
+            { range: [5.08, 10], label: "Higher", summary: "You know quite a lot about death-related matters. That’s a powerful tool.", action: "Consider helping others understand what you’ve learned—many people are looking for someone who can guide them." }
+          ]
+        };
+
+        // Calculate domain scores
+        const domainScores = {};
+        for (const section in grouped) {
+          const domain = domainMapping[section];
+          if (!domain) continue;
+          if (!domainScores[domain]) domainScores[domain] = [];
+
+          grouped[section].forEach(r => {
+            const num = parseFloat(r.response);
+            if (!isNaN(num)) domainScores[domain].push(num);
+          });
+        }
+
+        // Compute scaled scores
+        const scaledScores = {};
+        for (const domain in domainScores) {
+          const values = domainScores[domain];
+          const raw = values.reduce((sum, val) => sum + val, 0);
+          const scale = (raw / maxScores[domain]) * 10;
+          scaledScores[domain] = scale;
+        }
+
+        let html = "";
+        for (const section in grouped) {
+          html += `<h3 class=\"glow-title\">${section}</h3><ul>`;
+          grouped[section].forEach(r => {
+            html += `<li><strong>${r.question}</strong>: ${r.response}</li>`;
+          });
+          html += "</ul><hr />";
+        }
+
+        // Add benchmark comparisons
+        html += `<h2 class=\"glow-title\">Benchmark Comparison</h2><ul>`;
+        for (const domain in scaledScores) {
+          const score = scaledScores[domain];
+          const benchmark = benchmarks[domain];
+          const comparison = score > benchmark ? `✅ Above average` : score < benchmark ? `⚠️ Below average` : `🟨 Equal to average`;
+          html += `<li><strong>${domain}</strong>: ${score.toFixed(1)} (Benchmark: ${benchmark.toFixed(1)}) - ${comparison}</li>`;
+        }
+        html += "</ul><hr />";
+
+        // Add personalised feedback
+        html += `<h2 class=\"glow-title\">📝 Personalised Feedback</h2><ul>`;
+        for (const domain in scaledScores) {
+          const score = scaledScores[domain];
+          const matched = feedbackData[domain]?.find(fb => score >= fb.range[0] && score <= fb.range[1]);
+          if (matched) {
+            html += `<li><strong>${domain}</strong><br>
+              You scored ${score.toFixed(1)} out of 10.<br>
+              <em>${matched.summary}</em><br>
+              <strong>What you can do:</strong> ${matched.action}
+            </li>`;
+          }
+        }
+        html += "</ul>";
+        html += `<button id=\"download-report\" class=\"submit-btn\">⬇️ Download Report (PDF)</button>`;
+
+        container.classList.add("fade-in");
+        container.innerHTML = html;
+
+        document.addEventListener("click", function(e) {
+          if (e.target && e.target.id === "download-report") {
+            const reportContent = document.getElementById("dlq-results").innerHTML;
+            const win = window.open("", "", "height=700,width=900");
+            win.document.write("<html><head><title>My DLQ Report</title>");
+            win.document.write("<style>body{font-family:Arial,sans-serif;padding:20px;}h2,h3{color:#4d3e69;}ul{padding-left:20px;line-height:1.6;}li{margin-bottom:12px;}</style>");
+            win.document.write("</head><body>");
+            win.document.write("<h2>My Death Literacy Report</h2>");
+            win.document.write(reportContent);
+            win.document.write("</body></html>");
+            win.document.close();
+            win.print();
+          }
+        });
+
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div class="no-results"> Network error. Please try again.</div>`;
+      }
+    }
+  </script>
+</body>
+</html>

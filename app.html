@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Death Literacy Questionnaire</title>
+  <link rel="stylesheet" href="theme.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to bottom right, #ede7f6, #f3e5f5);
+      color: #333;
+    }
+
+    header {
+      background-color: #5c4d7d;
+      padding: 15px 30px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    header .logo {
+      font-size: 1.6em;
+      font-weight: bold;
+    }
+
+    nav ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      gap: 20px;
+    }
+
+    nav ul li a,
+    .logout-btn {
+      color: #fff;
+      text-decoration: none;
+      font-weight: 500;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+
+    nav ul li a:hover,
+    .logout-btn:hover {
+      opacity: 0.8;
+    }
+
+    .questionnaire-section {
+      background-color: #fff;
+      padding: 30px;
+      margin: 40px auto;
+      border-radius: 16px;
+      max-width: 900px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+
+    .questionnaire-section h2 {
+      text-align: center;
+      margin-bottom: 12px;
+      color: #5c4d7d;
+    }
+
+    .questionnaire-section p {
+      text-align: center;
+      color: #666;
+    }
+
+    .questionnaire-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    .questionnaire-section th,
+    .questionnaire-section td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+    }
+
+    .questionnaire-section td:first-child {
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .questionnaire-section tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    .submit-btn, .copy-btn {
+      background-color: #5c4d7d;
+      color: #fff;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 30px;
+      font-size: 1em;
+      margin: 20px auto;
+      display: block;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .submit-btn:hover, .copy-btn:hover {
+      background-color: #453561;
+    }
+
+    #dlq-confirmation {
+      text-align: center;
+      margin-top: 20px;
+      font-weight: bold;
+      color: green;
+    }
+
+    @media (max-width: 768px) {
+      .questionnaire-section table {
+        font-size: 0.9em;
+        overflow-x: auto;
+        display: block;
+      }
+      .questionnaire-section th,
+      .questionnaire-section td {
+        padding: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">LifeCycle</div>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="health-records.html">Health Records</a></li>
+        <li><button class="logout-btn" onclick="logout()">Logout</button></li>
+      </ul>
+    </nav>
+  </header>
+
+  <form id="dlq-form">
+    <div id="question-container"></div>
+    <button type="submit" class="submit-btn">Submit</button>
+  </form>
+
+  <div id="dlq-confirmation" style="text-align:center; margin-top: 25px; font-weight: bold; color: green;"></div>
+  <button type="button" id="copy-dlq-btn" class="copy-btn" style="display:none;">Copy DLQ ID</button>
+
+  <script>
+    function logout() {
+      localStorage.clear();
+      window.location.href = "login-register.html";
+    }
+
+    const API = "http://localhost:4000/api";
+    const token = localStorage.getItem("token");
+
+    const questions = [
+      {
+        section: "Demographics",
+        desc: "Please answer the following questions:",
+        prefix: "q",
+        items: [
+          {
+            label: "Country of residence",
+            type: "select",
+            options: ["Australia", "New Zealand", "Other"]
+          },
+          {
+            label: "Name of state (if Australia)",
+            type: "select",
+            options: ["ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"]
+          },
+          {
+            label: "Which of the following best describes where you live?",
+            type: "select",
+            options: [
+              "Urban area",
+              "Semi-urban area",
+              "Regional area",
+              "Rural area",
+              "Remote area"]
+          },
+          {
+            label: "What age group do you belong to?",
+            type: "select",
+            options: [
+              "Under 18",
+              "18 - 24 years",
+              "25 - 34 years",
+              "35 - 44 years",
+              "45 - 54 years",
+              "55 - 64 years",
+              "65 - 79 years",
+              "80+ years"]
+          },
+          {
+            label: "Please indicate your gender",
+            type: "select",
+            options: [
+              "Man/male",
+              "Woman/female",
+              "Non-binary/genderqueer/gender-fluid",
+              "I use a different term (please specify)",
+              "Prefer not to answer"]
+          },
+          {
+            label: "Are you currently living with a terminal illness?",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+        ]
+      },
+      {
+        section: "End-of-Life Planning",
+        desc: "Have you made any plans for the end of your life?",
+        prefix: "q6",
+        items: [
+          {
+            label: "Written a will",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "I have written down my wishes for end of life care (e.g. made an advance care directive)",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "Appointed someone to make decisions regarding your health or wellbeing e.g. Enduring guardianship/ Health care proxy",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "Appointed someone to make decisions regarding finances or property e.g. Enduring Power of Attorney/ Legally appointed substitute decision maker",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+        ]
+      },
+      {
+        section: "Personal Experience",
+        desc: "Have you had any of the following experiences?",
+        prefix: "qexp",
+        items: [
+          {
+            label: "I have kept someone company who is near death",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "I have witnessed the death of another person",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "I have spent time with a person after their death",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "I have helped care for a dead body",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "I do paid work or have done paid work with people at end of life or supporting people through loss and grief",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "I am a volunteer or have volunteered with people at end of life or supporting people through loss and grief",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "I have attended training on helping people with dying, grief or bereavement",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "Are you currently a health or medical practitioner?",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+        ]
+      },
+      {
+        section: "Community Connection",
+        desc: "Please indicate how you feel about the following sentences: 1 = do not agree at all and 5 = strongly agree.",
+        prefix: "q15",
+        items: [
+          "Most people in my community are helpful",
+          "I have someone I can call on for help",
+          "I feel connected to my community",
+          "I can rely on people in my community"
+        ]
+      },
+      {
+        section: "Talking Support",
+        desc: "How able are you to have the following conversations, where 1 = not at all able to 5 = very able?",
+        prefix: "q16",
+        items: [
+          "Talking about death, dying or grief to a close friend",
+          "Talking about death, dying or grief to a child",
+          "Talking to a grieving person about their loss",
+          "Talking to a health professional about getting support for a dying person where they live"
+        ]
+      },
+      {
+        section: "Providing Hands-on Care",
+        desc: "How able are you to do the following, where 1 = not at all able to 5 = very able?",
+        prefix: "q17",
+        items: [
+          "Feed or help a person to eat",
+          "Wash a person",
+          "Lift a person or help them move",
+          "Administer injections"
+        ]
+      },
+      {
+        section: "Experiential Knowledge",
+        desc: "To what extent do you agree with the following? 1 = do not agree at all and 5 = strongly agree.",
+        prefix: "q18",
+        items: [
+          "Made me more emotionally prepared to support others with death dying and bereavement",
+          "Made me think about what is important and not important in life",
+          "Developed my wisdom and understanding",
+          "Made me more compassionate toward myself",
+          "Made me better prepared to face similar challenges in the future"
+        ]
+      },
+      {
+        section: "Factual Knowledge",
+        desc: "To what extent do you agree with the following? 1 = do not agree at all and 5 = strongly agree",
+        prefix: "q19",
+        items: [
+          "I know the rules and regulations when a person dies at home",
+          "I know what documents are needed when planning for death",
+          "I know enough about the healthcare system to find the support that a dying person needs",
+          "I know enough to make decisions about funeral services and options",
+          "I know how to access palliative care in my area",
+          "I know enough about how illnesses progress to make decisions about medical treatments at end of life",
+          "I know about the ways that cemetery staff can be of help around funerals"
+        ]
+      },
+      {
+        section: "Community Knowledge",
+        desc: "Please rate your level of agreement with the following statements: 1 = Strongly disagree to 5 = Strongly agree",
+        prefix: "q20",
+        items: [
+          "To get support in the area where I live, e.g., from clubs, associations, or volunteer organizations",
+          "To get help with providing day to day care for a person at the end of life",
+          "To get equipment that is required for care",
+          "To get support that is culturally appropriate for a person",
+          "To get emotional support for myself"
+        ]
+      },
+      {
+        section: "Support Groups in My Community",
+        desc: "If I were to provide end-of-life care for someone, there is support in my community for…",
+        prefix: "q21",
+        items: [
+          {
+            label: "People with life threatening illnesses",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "People who are nearing the end of their lives",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "People who are caring for a dying person",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "People who are grieving",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+        ]
+      },
+      {
+        section: "Death Competency Scale",
+        desc: "Please rate your level of agreement with the following statements: 1 = do not agree at all and 5 = completely agree",
+        prefix: "q22",
+        items: [
+          "I am aware of the full array of emotions which characterize human grief",
+          "I feel prepared to face my dying process",
+          "I can put words to my gut-level feelings about death and dying",
+          "I know who to contact when death occurs",
+          "I will be able to cope with future losses",
+          "I know how to listen to others, including the terminally ill",
+          "I can help someone with their thoughts and feelings about death and dying",
+          "I would be able to talk to a friend or family member about their death",
+          "I can lessen the anxiety of those around me when the topic is death and dying"
+        ]
+      },
+      {
+        section: "Final Demographics",
+        desc: "Please answer the following questions:",
+        prefix: "qfinal",
+        items: [
+          {
+            label: "What is your ancestry? Ancestry means a person's ethnic origin or cultural heritage",
+            type: "select",
+            options: [
+              "Australia",
+              "America, including North, South and Central American and Caribbean",
+              "Chinese",
+              "Filipino",
+              "Vietnamese",
+              "India",
+              "South Korean",
+              "Japanese",
+              "Other SouthEast and NorthEast Asian",
+              "Other Southern and Central Asian",
+              "European, including British and lrish",
+              "African and Middle Eastern",
+              "Oceanian including New Zealand, Melanesian and Papuan, Micronesian and Polynesian",
+              "Other, please specific",
+              "Prefer not to say / Can't say",]
+          },
+          {
+            label: "Do you believe in afterlife?",
+            type: "select",
+            options: ["Yes", "No"]
+          },
+          {
+            label: "Which religion do you identify with?",
+            type: "select",
+            options: [
+              "Catholic",
+              "Anglican (Church of England) Uniting Church",
+              "Presbyterian",
+              "Buddhism",
+              "Islam",
+              "Greek Orthodox",
+              "Baptist",
+              "Hinduism",
+              "Spiritual",
+              "None",
+              "Other (please specify)",
+              " Prefer not to say",]
+          },
+        ]
+      }
+    ];
+
+    const container = document.getElementById("question-container");
+
+    questions.forEach(group => {
+      const section = document.createElement("section");
+      section.className = "questionnaire-section";
+      section.innerHTML = `<h2>${group.section}</h2><p>${group.desc}</p>`;
+
+      const table = document.createElement("table");
+
+      group.items.forEach((item, index) => {
+        const row = document.createElement("tr");
+        const inputName = `${group.prefix}_q${index + 1}`;
+        let labelText = typeof item === "string" ? item : item.label;
+        let inputCell = "";
+
+        if (typeof item === "object" && item.type === "select" && Array.isArray(item.options)) {
+          inputCell = `<td colspan="6"><label for="${inputName}">${labelText}</label><br/><select name="${inputName}" required>
+            ${item.options.map(opt => `<option value="${opt}">${opt}</option>`).join("")}
+          </select></td>`;
+        } else if (typeof item === "object" && item.type === "text") {
+          inputCell = `<td colspan="6"><label for="${inputName}">${labelText}</label><br/><input type="text" name="${inputName}" required></td>`;
+        } else {
+          inputCell = `<td>${labelText}</td>` +
+            [1, 2, 3, 4, 5].map(n =>
+              `<td><input type="radio" name="${inputName}" value="${n}" required></td>`
+            ).join("");
+        }
+
+        row.innerHTML = inputCell;
+        table.appendChild(row);
+      });
+
+      section.appendChild(table);
+      container.appendChild(section);
+    });
+
+    document.getElementById("dlq-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      if (!token) {
+        alert("You must be logged in to submit.");
+        return;
+      }
+
+      const formData = new FormData(this);
+      const flat = Object.fromEntries(formData.entries());
+
+      const responses = [];
+
+      questions.forEach(group => {
+        group.items.forEach((item, i) => {
+          const inputName = `${group.prefix}_q${i + 1}`;
+          const question = typeof item === "string" ? item : item.label;
+          const responseValue = flat[inputName];
+
+          if (responseValue) {
+            responses.push({
+              section: group.section,
+              question,
+              response: responseValue?.trim?.() || "N/A"
+            });
+          }
+        });
+      });
+
+      try {
+        const res = await fetch(`${API}/submit-questionnaire`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ responses })
+        });
+
+        const data = await res.json();
+        console.log("DLQ response:", data);
+
+        if (res.ok && data.dlqId) {
+          const dlqBox = document.getElementById("dlq-confirmation");
+          dlqBox.innerHTML = `
+            ✅ Questionnaire submitted!<br />
+            Your DLQ ID: <strong id="dlq-id">${data.dlqId}</strong><br />
+            Save this ID to view your responses later.`;
+          document.getElementById("dlq-form").remove();
+          document.getElementById("copy-dlq-btn").style.display = "inline-block";
+          const viewReportBtn = document.createElement("a");
+          viewReportBtn.href = `health-records.html?dlq=${data.dlqId}`;
+          viewReportBtn.textContent = "📊 View My Report";
+          viewReportBtn.className = "submit-btn";
+          viewReportBtn.style.marginTop = "15px";
+          viewReportBtn.style.display = "block";
+          dlqBox.appendChild(viewReportBtn);
+        } else {
+          alert("❌ " + (data.error || "Submission failed."));
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Network error. Please try again.");
+      }
+    });
+
+    // Copy DLQ ID
+    document.getElementById("copy-dlq-btn").addEventListener("click", function () {
+      const idText = document.getElementById("dlq-id")?.innerText;
+      if (idText) {
+        navigator.clipboard.writeText(idText).then(() => {
+          alert("DLQ ID copied to clipboard!");
+        });
+      }
+    });
+  </script>
+</body>
+</html>
